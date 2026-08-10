@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: buscacep-worker
+  namespace: default
+  labels:
+    app: buscacep-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: buscacep-worker
+  template:
+    metadata:
+      labels:
+        app: buscacep-worker
+    spec:
+      serviceAccountName: buscacep-ksa
+      containers:
+        - name: buscacep-worker
+          # Mesma imagem da API — entrypoint diferente via command.
+          # IMAGE_PLACEHOLDER é substituído pelo SHA do commit no workflow de deploy.
+          image: IMAGE_PLACEHOLDER
+          command: ["python", "-m", "worker.main"]
+          env:
+            - name: PUBSUB_PROJECT_ID
+              value: "ia-infra-gcp-project-01"
+            - name: PUBSUB_TOPIC_ID
+              value: "cep-consultado"
+            - name: PUBSUB_SUBSCRIPTION_ID
+              value: "cep-consultado-sub"
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "128Mi"
+          # Worker expõe /healthz e /readyz na porta 8000 via HTTPServer em thread.
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3

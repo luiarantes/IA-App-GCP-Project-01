@@ -1,0 +1,128 @@
+name: Deploy BuscaCEP
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: ia-infra-gcp-project-01
+  REGION: us-central1
+  AR_REPO: sample-app
+  IMAGE: buscacep
+  CLUSTER: aiops-gke
+  NAMESPACE: default
+  WIF_PROVIDER: projects/1024364095553/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider
+  DEPLOY_SA: apps-deploy@ia-infra-gcp-project-01.iam.gserviceaccount.com
+
+jobs:
+
+  # --------------------------------------------------------------------------
+  # 1. Testes unitários — rodam offline, sem Docker nem GCP.
+  # Os testes de integração (WireMock) ficam fora do CI por ora: exigem
+  # Docker-in-Docker e aumentam muito o tempo do pipeline.
+  # --------------------------------------------------------------------------
+  test:
+    name: Testes unitários
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependências
+        run: pip install -r requirements-dev.txt
+
+      - name: Rodar testes
+        run: pytest tests/test_api.py -v
+
+  # --------------------------------------------------------------------------
+  # 2. Build e push da imagem para o Artifact Registry.
+  # A tag é o SHA curto do commit — rastreável, sem sobrescrever versões.
+  # --------------------------------------------------------------------------
+  build-push:
+    name: Build e push
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    outputs:
+      image: ${{ steps.build.outputs.image }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Autenticar no GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.DEPLOY_SA }}
+
+      - name: Configurar Docker para o Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      - name: Build e push
+        id: build
+        run: |
+          IMAGE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.AR_REPO }}/${{ env.IMAGE }}:${{ github.sha }}"
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
+  # --------------------------------------------------------------------------
+  # 3. Deploy no GKE.
+  # Aplica todos os manifestos de k8s/ com a imagem do SHA atual.
+  # Idempotente: cria na primeira vez, atualiza nas seguintes.
+  # --------------------------------------------------------------------------
+  deploy:
+    name: Deploy no GKE
+    needs: build-push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Autenticar no GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.DEPLOY_SA }}
+
+      - name: Configurar kubectl
+        uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: ${{ env.CLUSTER }}
+          location: ${{ env.REGION }}
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Substituir placeholder da imagem
+        run: |
+          IMAGE="${{ needs.build-push.outputs.image }}"
+          sed -i "s|IMAGE_PLACEHOLDER|${IMAGE}|g" k8s/deployment-api.yaml k8s/deployment-worker.yaml
+
+      - name: Aplicar manifestos
+        run: kubectl apply -f k8s/ -n ${{ env.NAMESPACE }}
+
+      - name: Aguardar rollout
+        run: |
+          kubectl rollout status deployment/buscacep-api    -n ${{ env.NAMESPACE }} --timeout=120s
+          kubectl rollout status deployment/buscacep-worker -n ${{ env.NAMESPACE }} --timeout=120s
+
+      - name: Exibir IP externo da API
+        run: |
+          echo "Aguardando IP do LoadBalancer..."
+          for i in $(seq 1 12); do
+            IP=$(kubectl get svc buscacep-api -n ${{ env.NAMESPACE }} -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null)
+            if [ -n "$IP" ]; then
+              echo "API disponível em: http://${IP}"
+              break
+            fi
+            sleep 10
+          done

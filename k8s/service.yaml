@@ -1,0 +1,16 @@
+# LoadBalancer expõe a API externamente com IP público.
+# O IP é alocado pelo GKE ao aplicar; use `kubectl get svc buscacep-api`
+# para obtê-lo após o primeiro deploy.
+apiVersion: v1
+kind: Service
+metadata:
+  name: buscacep-api
+  namespace: default
+spec:
+  type: LoadBalancer
+  selector:
+    app: buscacep-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8000
