@@ -1,0 +1,19 @@
+# Instrui o Google Managed Prometheus a coletar /metrics da API a cada 30s.
+# Sem este recurso, o GMP só enxerga métricas de sistema (CPU/memória do pod)
+# — as métricas de aplicação (http_requests_total, latência) ficam invisíveis
+# para os alertas do Cloud Monitoring e para o agente AIOps.
+#
+# Requer que a porta do container seja nomeada "http" no Deployment.
+apiVersion: monitoring.googleapis.com/v1
+kind: PodMonitoring
+metadata:
+  name: buscacep-api
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: buscacep-api
+  endpoints:
+    - port: http
+      interval: 30s
+      path: /metrics

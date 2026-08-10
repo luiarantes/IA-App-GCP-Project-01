@@ -30,8 +30,19 @@ async def consultar(cep: str) -> dict:
     except (httpx.HTTPError, ValueError) as exc:
         raise UpstreamIndisponivelError(str(exc)) from exc
 
-    # O ViaCEP responde 200 com {"erro": true} quando o CEP não existe.
+    # O ViaCEP responde 200 com {"erro": true} em dois cenários distintos:
+    #   1. CEP com formato válido mas inexistente na base.
+    #   2. Rate limiting / instabilidade do upstream sob alta concorrência
+    #      (o ViaCEP retorna o mesmo corpo que o caso 1 — impossível distinguir
+    #      via API). Se esse log aparecer para um CEP reconhecidamente válido,
+    #      o provável culpado é throttling do upstream, não ausência do CEP.
     if dados.get("erro"):
+        import logging as _logging
+        _logging.getLogger(__name__).warning(
+            "viacep retornou {erro:true} para cep=%s — "
+            "CEP inexistente ou upstream com throttling",
+            cep,
+        )
         raise CepNaoEncontradoError(cep)
 
     return dados

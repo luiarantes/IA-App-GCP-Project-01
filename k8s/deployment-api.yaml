@@ -21,7 +21,10 @@ spec:
           # IMAGE_PLACEHOLDER é substituído pelo SHA do commit no workflow de deploy.
           image: IMAGE_PLACEHOLDER
           ports:
-            - containerPort: 8000
+            # Porta nomeada — obrigatório para o PodMonitoring referenciar
+            # via `port: http` e fazer scrape do /metrics pelo GMP.
+            - name: http
+              containerPort: 8000
           env:
             - name: PUBSUB_PROJECT_ID
               value: "ia-infra-gcp-project-01"
