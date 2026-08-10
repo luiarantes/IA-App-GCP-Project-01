@@ -1,0 +1,4 @@
+[tool.pytest.ini_options]
+# Adiciona a raiz do projeto ao PYTHONPATH para que `from app import ...`
+# funcione tanto localmente quanto no CI (pytest >= 7.0).
+pythonpath = ["."]
