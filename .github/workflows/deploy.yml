@@ -112,8 +112,8 @@ jobs:
 
       - name: Aguardar rollout
         run: |
-          kubectl rollout status deployment/buscacep-api    -n ${{ env.NAMESPACE }} --timeout=120s
-          kubectl rollout status deployment/buscacep-worker -n ${{ env.NAMESPACE }} --timeout=120s
+          kubectl rollout status deployment/buscacep-api    -n ${{ env.NAMESPACE }} --timeout=5m
+          kubectl rollout status deployment/buscacep-worker -n ${{ env.NAMESPACE }} --timeout=5m
 
       - name: Exibir IP externo da API
         run: |
