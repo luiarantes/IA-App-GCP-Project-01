@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BuscaCEP</title>
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --card: #ffffff;
+      --text: #1a2733;
+      --muted: #5c6b7a;
+      --accent: #1a73e8;
+      --accent-hover: #1557b0;
+      --error: #c5221f;
+      --border: #dde3e9;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #12181f;
+        --card: #1b232c;
+        --text: #e8edf2;
+        --muted: #9aa8b5;
+        --accent: #4c8df6;
+        --accent-hover: #6ea1f8;
+        --error: #f28b82;
+        --border: #2c3844;
+      }
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2rem;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    }
+    h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
+    .subtitulo { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.5rem; }
+    form { display: flex; gap: 0.5rem; margin-bottom: 1.25rem; }
+    input {
+      flex: 1;
+      padding: 0.65rem 0.85rem;
+      font-size: 1rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg);
+      color: var(--text);
+    }
+    input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+    button {
+      padding: 0.65rem 1.1rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+    }
+    button:hover { background: var(--accent-hover); }
+    button:disabled { opacity: 0.6; cursor: wait; }
+    .resultado dl {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 0.4rem 1rem;
+      font-size: 0.95rem;
+    }
+    .resultado dt { color: var(--muted); }
+    .resultado dd { font-weight: 500; }
+    .erro { color: var(--error); font-size: 0.95rem; }
+    .oculto { display: none; }
+    footer { margin-top: 1.5rem; font-size: 0.8rem; color: var(--muted); text-align: center; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>BuscaCEP</h1>
+    <p class="subtitulo">Consulte um CEP e veja o endereço completo.</p>
+
+    <form id="form-cep">
+      <input id="campo-cep" type="text" inputmode="numeric" placeholder="01310-100"
+             maxlength="9" autocomplete="postal-code" autofocus>
+      <button id="botao-buscar" type="submit">Buscar</button>
+    </form>
+
+    <div id="resultado" class="resultado oculto">
+      <dl>
+        <dt>CEP</dt><dd id="r-cep"></dd>
+        <dt>Logradouro</dt><dd id="r-logradouro"></dd>
+        <dt>Bairro</dt><dd id="r-bairro"></dd>
+        <dt>Cidade</dt><dd id="r-localidade"></dd>
+        <dt>UF</dt><dd id="r-uf"></dd>
+        <dt>DDD</dt><dd id="r-ddd"></dd>
+      </dl>
+    </div>
+
+    <p id="erro" class="erro oculto"></p>
+
+    <footer>Dados fornecidos pelo <a href="https://viacep.com.br" target="_blank" rel="noopener">ViaCEP</a></footer>
+  </main>
+
+  <script>
+    const form = document.getElementById("form-cep");
+    const campo = document.getElementById("campo-cep");
+    const botao = document.getElementById("botao-buscar");
+    const resultado = document.getElementById("resultado");
+    const erro = document.getElementById("erro");
+
+    campo.addEventListener("input", () => {
+      const digitos = campo.value.replace(/\D/g, "").slice(0, 8);
+      campo.value = digitos.length > 5 ? digitos.slice(0, 5) + "-" + digitos.slice(5) : digitos;
+    });
+
+    form.addEventListener("submit", async (evento) => {
+      evento.preventDefault();
+      resultado.classList.add("oculto");
+      erro.classList.add("oculto");
+      botao.disabled = true;
+
+      try {
+        const resposta = await fetch(`/api/cep/${campo.value.replace(/\D/g, "")}`);
+        const corpo = await resposta.json();
+
+        if (!resposta.ok) {
+          erro.textContent = corpo.detail || `Erro ${resposta.status} ao consultar o CEP.`;
+          erro.classList.remove("oculto");
+          return;
+        }
+
+        for (const chave of ["cep", "logradouro", "bairro", "localidade", "uf", "ddd"]) {
+          document.getElementById(`r-${chave}`).textContent = corpo[chave] || "—";
+        }
+        resultado.classList.remove("oculto");
+      } catch {
+        erro.textContent = "Não foi possível conectar ao servidor.";
+        erro.classList.remove("oculto");
+      } finally {
+        botao.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

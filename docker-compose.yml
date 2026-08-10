@@ -1,0 +1,54 @@
+services:
+
+  # -----------------------------------------------------------------
+  # Emulador local do Google Pub/Sub
+  # Equivale ao Pub/Sub real do GCP, sem precisar de conta ou créditos.
+  # -----------------------------------------------------------------
+  pubsub-emulator:
+    build:
+      context: docker/pubsub-emulator
+      dockerfile: Dockerfile
+    ports:
+      - "8085:8085"
+    healthcheck:
+      # Testa a porta gRPC via bash built-in — não depende de nc/curl na imagem.
+      test: ["CMD-SHELL", "timeout 2 bash -c '</dev/tcp/localhost/8085' 2>/dev/null && exit 0 || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 15s
+
+  # -----------------------------------------------------------------
+  # Worker — consome eventos de consulta do tópico Pub/Sub.
+  # Para simular falha de fila: pare este serviço e faça consultas
+  # na API. As mensagens acumulam na subscription e o backlog sobe.
+  # -----------------------------------------------------------------
+  worker:
+    build: .
+    command: python -m worker.main
+    environment:
+      PUBSUB_EMULATOR_HOST: pubsub-emulator:8085
+      PUBSUB_PROJECT_ID: buscacep-local
+      PUBSUB_TOPIC_ID: cep-consultado
+      PUBSUB_SUBSCRIPTION_ID: cep-consultado-sub
+    depends_on:
+      pubsub-emulator:
+        condition: service_healthy
+    restart: on-failure
+
+  # -----------------------------------------------------------------
+  # API BuscaCEP — publica um evento a cada consulta de CEP.
+  # Inicia após o worker para que o tópico já exista no primeiro publish.
+  # -----------------------------------------------------------------
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      PUBSUB_EMULATOR_HOST: pubsub-emulator:8085
+      PUBSUB_PROJECT_ID: buscacep-local
+      PUBSUB_TOPIC_ID: cep-consultado
+    depends_on:
+      worker:
+        condition: service_started
+    restart: on-failure

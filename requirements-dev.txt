@@ -1,0 +1,3 @@
+-r requirements.txt
+pytest>=8.0
+anyio[trio]>=4.0   # testes async (integração com WireMock)

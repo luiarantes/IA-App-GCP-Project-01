@@ -1,0 +1,11 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/ws/99999999/json/"
+  },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json" },
+    "jsonBody": { "erro": true }
+  }
+}

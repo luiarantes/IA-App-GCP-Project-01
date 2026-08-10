@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+notas-privadas/
+*.pyc
+.pytest_cache/
+.DS_Store

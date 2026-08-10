@@ -1,0 +1,12 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/ws/11111111/json/"
+  },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json" },
+    "jsonBody": { "cep": "11111-111" },
+    "fixedDelayMilliseconds": 8000
+  }
+}
