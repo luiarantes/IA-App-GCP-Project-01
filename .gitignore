@@ -4,3 +4,7 @@ notas-privadas/
 *.pyc
 .pytest_cache/
 .DS_Store
+
+# Contexto pra sessoes de IA (Claude Code) - mesma logica do
+# notas-privadas/, nunca vai pro repo publico
+CLAUDE.md
