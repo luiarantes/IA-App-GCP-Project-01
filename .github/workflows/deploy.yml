@@ -8,6 +8,7 @@ on:
 env:
   PROJECT_ID: ia-infra-gcp-project-01
   REGION: us-central1
+  CLUSTER_LOCATION: us-central1-a
   AR_REPO: sample-app
   IMAGE: buscacep
   CLUSTER: aiops-gke
@@ -99,7 +100,7 @@ jobs:
         uses: google-github-actions/get-gke-credentials@v2
         with:
           cluster_name: ${{ env.CLUSTER }}
-          location: ${{ env.REGION }}
+          location: ${{ env.CLUSTER_LOCATION }}
           project_id: ${{ env.PROJECT_ID }}
 
       - name: Substituir placeholder da imagem
