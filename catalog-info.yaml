@@ -1,0 +1,22 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: buscacep
+  title: BuscaCEP Service
+  description: Serviço FastAPI de consulta de CEPs com mensageria assíncrona Google Pub/Sub e métricas Prometheus.
+  tags:
+    - python
+    - fastapi
+    - pubsub
+    - prometheus
+    - opentelemetry
+  annotations:
+    github.com/project-slug: luiarantes/IA-App-GCP-Project-01
+    openobserve.io/service-name: buscacep-api
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8000"
+spec:
+  type: service
+  lifecycle: production
+  owner: platform-team
+  system: aiops-platform
