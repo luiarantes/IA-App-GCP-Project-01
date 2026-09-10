@@ -55,10 +55,32 @@ def publicar_consulta(cep: str, encontrado: bool, dados: dict | None = None) -> 
         evento["uf"] = dados.get("uf", "")
 
     try:
-        client = _get_client()
-        topic_path = client.topic_path(_PROJECT_ID, _TOPIC_ID)
-        payload = json.dumps(evento, ensure_ascii=False).encode()
-        future = client.publish(topic_path, payload)
-        future.add_done_callback(_on_publish)
+        from opentelemetry import propagate, trace
+
+        tracer = trace.get_tracer("buscacep-api")
+        with tracer.start_as_current_span("buscacep-api.publish_event") as span:
+            span.set_attribute("messaging.system", "pubsub")
+            span.set_attribute("messaging.destination", _TOPIC_ID)
+            span.set_attribute("cep", cep)
+            span.set_attribute("encontrado", encontrado)
+
+            carrier: dict[str, str] = {}
+            propagate.inject(carrier)
+
+            client = _get_client()
+            topic_path = client.topic_path(_PROJECT_ID, _TOPIC_ID)
+            payload = json.dumps(evento, ensure_ascii=False).encode()
+            future = client.publish(topic_path, payload, **carrier)
+            future.add_done_callback(_on_publish)
+    except ImportError:
+        try:
+            client = _get_client()
+            topic_path = client.topic_path(_PROJECT_ID, _TOPIC_ID)
+            payload = json.dumps(evento, ensure_ascii=False).encode()
+            future = client.publish(topic_path, payload)
+            future.add_done_callback(_on_publish)
+        except Exception as exc:
+            logger.warning("Erro ao iniciar publicação no Pub/Sub: %s", exc)
     except Exception as exc:
         logger.warning("Erro ao iniciar publicação no Pub/Sub: %s", exc)
+

@@ -30,6 +30,9 @@ spec:
               value: "ia-infra-gcp-project-01"
             - name: PUBSUB_TOPIC_ID
               value: "cep-consultado"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector:4318/v1/traces"
+
           resources:
             requests:
               cpu: "100m"

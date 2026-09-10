@@ -35,6 +35,41 @@ SUBSCRIPTION_ID = os.getenv("PUBSUB_SUBSCRIPTION_ID", "cep-consultado-sub")
 _MODO_EMULADOR = bool(os.getenv("PUBSUB_EMULATOR_HOST"))
 _HEALTH_PORT = int(os.getenv("WORKER_HEALTH_PORT", "8000"))
 
+# Instrumentação OpenTelemetry
+from opentelemetry import propagate, trace
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+
+OTEL_EXPORTER_OTLP_ENDPOINT = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+ENABLE_CLOUD_TRACE = os.getenv("ENABLE_CLOUD_TRACE", "true").lower() == "true"
+
+resource = Resource.create({"service.name": "buscacep-worker"})
+provider = TracerProvider(resource=resource)
+
+if OTEL_EXPORTER_OTLP_ENDPOINT:
+    from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+
+    headers = {}
+    if os.environ.get("OTEL_EXPORTER_OTLP_HEADERS"):
+        for h in os.environ["OTEL_EXPORTER_OTLP_HEADERS"].split(","):
+            if "=" in h:
+                k, v = h.split("=", 1)
+                headers[k.strip()] = v.strip()
+    provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter(endpoint=OTEL_EXPORTER_OTLP_ENDPOINT, headers=headers)))
+    logger.info("Tracing OTel habilitado via OTLP: %s", OTEL_EXPORTER_OTLP_ENDPOINT)
+elif ENABLE_CLOUD_TRACE and PROJECT_ID not in ("aiops-local", "buscacep-local", ""):
+    try:
+        from opentelemetry.exporter.cloud_trace import CloudTraceSpanExporter
+
+        provider.add_span_processor(BatchSpanProcessor(CloudTraceSpanExporter(project_id=PROJECT_ID)))
+        logger.info("Tracing OTel habilitado via CloudTraceSpanExporter (GCP)")
+    except Exception as exc:
+        logger.warning("Nao foi possivel inicializar CloudTraceSpanExporter: %s", exc)
+
+trace.set_tracer_provider(provider)
+tracer = trace.get_tracer("buscacep-worker")
+
 
 def _garantir_recursos() -> tuple:
     """Cria tópico e subscription se não existirem. Retorna (subscriber, subscription_path)."""
@@ -64,28 +99,39 @@ def _garantir_recursos() -> tuple:
 
 def _processar(message) -> None:
     """Callback chamado pelo cliente Pub/Sub para cada mensagem recebida."""
-    try:
-        dados = json.loads(message.data.decode())
-        cep = dados.get("cep", "?")
-        encontrado = dados.get("encontrado", False)
-        localidade = dados.get("localidade", "-")
-        uf = dados.get("uf", "-")
-        ts = dados.get("timestamp_iso", "-")
+    carrier = dict(message.attributes)
+    ctx = propagate.extract(carrier)
 
-        if encontrado:
-            logger.info(
-                "CEP consultado | cep=%-9s localidade=%s/%s ts=%s",
-                cep, localidade, uf, ts,
-            )
-        else:
-            logger.info("CEP não encontrado | cep=%-9s ts=%s", cep, ts)
+    with tracer.start_as_current_span("buscacep-worker.process_event", context=ctx) as span:
+        try:
+            dados = json.loads(message.data.decode())
+            cep = dados.get("cep", "?")
+            encontrado = dados.get("encontrado", False)
+            localidade = dados.get("localidade", "-")
+            uf = dados.get("uf", "-")
+            ts = dados.get("timestamp_iso", "-")
 
-    except Exception as exc:
-        logger.error("Erro ao processar mensagem (id=%s): %s", message.message_id, exc)
-    finally:
-        # Ack sempre — em cenários de falha real, comentar esta linha para
-        # que as mensagens acumulem na fila e o agente AIOps detecte o backlog.
-        message.ack()
+            span.set_attribute("messaging.system", "pubsub")
+            span.set_attribute("messaging.destination", TOPIC_ID)
+            span.set_attribute("cep", cep)
+            span.set_attribute("encontrado", encontrado)
+
+            if encontrado:
+                logger.info(
+                    "CEP consultado | cep=%-9s localidade=%s/%s ts=%s",
+                    cep, localidade, uf, ts,
+                )
+            else:
+                logger.info("CEP não encontrado | cep=%-9s ts=%s", cep, ts)
+
+        except Exception as exc:
+            logger.error("Erro ao processar mensagem (id=%s): %s", message.message_id, exc)
+            span.record_exception(exc)
+        finally:
+            # Ack sempre — em cenários de falha real, comentar esta linha para
+            # que as mensagens acumulem na fila e o agente AIOps detecte o backlog.
+            message.ack()
+
 
 
 class _HealthHandler(BaseHTTPRequestHandler):

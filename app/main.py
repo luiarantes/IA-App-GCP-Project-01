@@ -1,5 +1,5 @@
-"""BuscaCEP — API e frontend de consulta de CEP."""
-
+import logging
+import os
 import re
 import time
 from pathlib import Path
@@ -11,10 +11,52 @@ from pydantic import BaseModel
 
 from app import publisher, viacep
 
+logger = logging.getLogger("buscacep-api")
+
+# Instrumentação OpenTelemetry
+from opentelemetry import trace
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+
+PROJECT_ID = os.environ.get("PUBSUB_PROJECT_ID", "aiops-local")
+OTEL_EXPORTER_OTLP_ENDPOINT = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT")
+ENABLE_CLOUD_TRACE = os.environ.get("ENABLE_CLOUD_TRACE", "true").lower() == "true"
+
+resource = Resource.create({"service.name": "buscacep-api"})
+provider = TracerProvider(resource=resource)
+
+if OTEL_EXPORTER_OTLP_ENDPOINT:
+    from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+
+    headers = {}
+    if os.environ.get("OTEL_EXPORTER_OTLP_HEADERS"):
+        for h in os.environ["OTEL_EXPORTER_OTLP_HEADERS"].split(","):
+            if "=" in h:
+                k, v = h.split("=", 1)
+                headers[k.strip()] = v.strip()
+    provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter(endpoint=OTEL_EXPORTER_OTLP_ENDPOINT, headers=headers)))
+    logger.info("Tracing OTel habilitado via OTLP: %s", OTEL_EXPORTER_OTLP_ENDPOINT)
+elif ENABLE_CLOUD_TRACE and PROJECT_ID not in ("aiops-local", "buscacep-local", ""):
+    try:
+        from opentelemetry.exporter.cloud_trace import CloudTraceSpanExporter
+
+        provider.add_span_processor(BatchSpanProcessor(CloudTraceSpanExporter(project_id=PROJECT_ID)))
+        logger.info("Tracing OTel habilitado via CloudTraceSpanExporter (GCP)")
+    except Exception as exc:
+        logger.warning("Nao foi possivel inicializar CloudTraceSpanExporter: %s", exc)
+
+trace.set_tracer_provider(provider)
+HTTPXClientInstrumentor().instrument()
+
 APP_VERSION = "0.1.0"
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 
 app = FastAPI(title="BuscaCEP", version=APP_VERSION)
+FastAPIInstrumentor.instrument_app(app, excluded_urls="healthz,readyz,metrics")
+
 
 HTTP_REQUESTS = Counter(
     "http_requests_total",

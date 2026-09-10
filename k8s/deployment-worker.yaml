@@ -29,6 +29,9 @@ spec:
               value: "cep-consultado"
             - name: PUBSUB_SUBSCRIPTION_ID
               value: "cep-consultado-sub"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector:4318/v1/traces"
+
           resources:
             requests:
               cpu: "50m"
