@@ -72,6 +72,9 @@ def publicar_consulta(cep: str, encontrado: bool, dados: dict | None = None) -> 
             payload = json.dumps(evento, ensure_ascii=False).encode()
             future = client.publish(topic_path, payload, **carrier)
             future.add_done_callback(_on_publish)
+            trace_id = format(span.get_span_context().trace_id, "032x") if span.get_span_context().is_valid else ""
+            logger.info("trace_id=%s Evento publicado no Pub/Sub | topico=%s cep=%s", trace_id, _TOPIC_ID, cep)
+
     except ImportError:
         try:
             client = _get_client()

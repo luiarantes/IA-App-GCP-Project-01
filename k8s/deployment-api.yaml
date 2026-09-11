@@ -32,6 +32,9 @@ spec:
               value: "cep-consultado"
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: "http://otel-collector:4318/v1/traces"
+            - name: OTEL_EXPORTER_OTLP_LOGS_ENDPOINT
+              value: "http://otel-collector:4318/v1/logs"
+
 
           resources:
             requests:
