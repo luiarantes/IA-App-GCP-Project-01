@@ -9,4 +9,5 @@ opentelemetry-instrumentation-fastapi>=0.46b0
 opentelemetry-instrumentation-httpx>=0.46b0
 opentelemetry-exporter-otlp-proto-http>=1.25.0
 opentelemetry-exporter-gcp-trace>=1.6.0
+pyroscope-io>=1.2.3
 
