@@ -14,7 +14,7 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ### Changed
 - Desacoplamento da esteira de deploy em nuvem (`.github/workflows/deploy.yml`), que passa a operar exclusivamente sob demanda (`workflow_dispatch`), respeitando a efemeridade e o custo zero da infraestrutura GCP.
-- Seção de testes no `README.md` reestruturada para "Qualidade de Código e Testes", detalhando uso do Ruff, Mypy e filtros de execução do Pytest.
+- Documentação do `README.md` expandida com guia de qualidade de código (Ruff, Mypy, Pytest) e detalhamento da esteira de CI/CD desacoplada.
 
 ### Fixed
 - **worker**: Tratamento defensivo de retorno `None` no parsing de cabeçalhos OTLP (`OTEL_EXPORTER_OTLP_HEADERS`), prevenindo falhas de desempacotamento de strings.

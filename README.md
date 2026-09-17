@@ -161,3 +161,10 @@ docker run --rm -p 8000:8000 buscacep:0.1.0
   coleta por Prometheus / Google Managed Prometheus.
 - `/healthz` e `/readyz` são separados de propósito: liveness indica que o
   processo está vivo; readiness indica que a aplicação pode receber tráfego.
+
+## CI/CD e Deploy
+
+A entrega da aplicação é estruturada em workflows desacoplados no GitHub Actions:
+
+- **CI (`.github/workflows/ci.yml`)**: Executado automaticamente a cada `push` ou `pull_request` na branch `main`. Realiza validação de sintaxe e estilo com **Ruff**, checagem estática de tipos com **Mypy** e executa a suíte de testes unitários offline com **Pytest**.
+- **Deploy (`.github/workflows/deploy.yml`)**: Disparado **sob demanda via `workflow_dispatch`**. Autentica sem chaves estáticas via Workload Identity Federation, realiza build e push da imagem para o Google Artifact Registry e aplica os manifestos Kubernetes no cluster GKE (`aiops-gke`) quando o ambiente em nuvem estiver ativo.
