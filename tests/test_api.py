@@ -4,7 +4,6 @@ A chamada ao ViaCEP é substituída por dublês (monkeypatch) para que os testes
 rodem sem acesso à internet e sem depender do serviço externo.
 """
 
-import pytest
 from fastapi.testclient import TestClient
 
 from app import viacep

@@ -6,20 +6,18 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, Response
-from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
-from pydantic import BaseModel
-
-from app import publisher, viacep
-
-logger = logging.getLogger("buscacep-api")
-
-# Instrumentação OpenTelemetry
 from opentelemetry import trace
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
+from pydantic import BaseModel
+
+from app import publisher, viacep
+
+logger = logging.getLogger("buscacep-api")
 
 PROJECT_ID = os.environ.get("PUBSUB_PROJECT_ID", "aiops-local")
 OTEL_EXPORTER_OTLP_ENDPOINT = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT")
@@ -156,14 +154,14 @@ async def buscar_cep(cep: str) -> Endereco:
 
     try:
         dados = await viacep.consultar(digitos)
-    except viacep.CepNaoEncontradoError:
+    except viacep.CepNaoEncontradoError as err:
         publisher.publicar_consulta(digitos, encontrado=False)
-        raise HTTPException(status_code=404, detail=f"CEP {digitos} não encontrado.")
-    except viacep.UpstreamIndisponivelError:
+        raise HTTPException(status_code=404, detail=f"CEP {digitos} não encontrado.") from err
+    except viacep.UpstreamIndisponivelError as err:
         raise HTTPException(
             status_code=502,
             detail="Serviço de consulta de CEP indisponível no momento.",
-        )
+        ) from err
 
     publisher.publicar_consulta(digitos, encontrado=True, dados=dados)
 

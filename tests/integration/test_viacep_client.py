@@ -6,14 +6,14 @@ aqui o cliente HTTP real — httpx, timeout, parse do JSON, tratamento do
 {"erro": true} — é exercitado contra o WireMock rodando em Docker.
 """
 
-import os
-
 import pytest
+
+from app import viacep
 
 # Aponta o cliente para o WireMock antes de importar o módulo.
 # A fixture `wiremock` garante que o container já está de pé quando
 # este módulo é carregado.
-pytestmark = pytest.mark.usefixtures("wiremock")
+pytestmark = [pytest.mark.usefixtures("wiremock"), pytest.mark.integration]
 
 
 @pytest.fixture(autouse=True)
@@ -21,8 +21,6 @@ def apontar_para_wiremock(wiremock, monkeypatch):
     """Redireciona VIACEP_URL para o WireMock a cada teste."""
     monkeypatch.setenv("VIACEP_BASE_URL", wiremock)
     # Força a reavaliação da URL no módulo (ela é resolvida no import).
-    import importlib
-    from app import viacep
     monkeypatch.setattr(viacep, "VIACEP_URL", wiremock.rstrip("/") + "/ws/{cep}/json/")
 
 
