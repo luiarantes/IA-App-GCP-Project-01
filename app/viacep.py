@@ -1,6 +1,7 @@
 """Cliente HTTP para a API pública do ViaCEP (https://viacep.com.br)."""
 
 import os
+from typing import Any
 
 import httpx
 
@@ -19,7 +20,7 @@ class UpstreamIndisponivelError(Exception):
     """Falha de rede, timeout ou resposta inválida do ViaCEP."""
 
 
-async def consultar(cep: str) -> dict:
+async def consultar(cep: str) -> dict[str, Any]:
     """Consulta um CEP (8 dígitos, já normalizado) e retorna o JSON do ViaCEP."""
     url = VIACEP_URL.format(cep=cep)
     try:
@@ -30,6 +31,9 @@ async def consultar(cep: str) -> dict:
     except (httpx.HTTPError, ValueError) as exc:
         raise UpstreamIndisponivelError(str(exc)) from exc
 
+    if not isinstance(dados, dict):
+        raise UpstreamIndisponivelError("Formato de resposta inválido do ViaCEP.")
+
     # O ViaCEP responde 200 com {"erro": true} em dois cenários distintos:
     #   1. CEP com formato válido mas inexistente na base.
     #   2. Rate limiting / instabilidade do upstream sob alta concorrência
@@ -38,6 +42,7 @@ async def consultar(cep: str) -> dict:
     #      o provável culpado é throttling do upstream, não ausência do CEP.
     if dados.get("erro"):
         import logging as _logging
+
         _logging.getLogger(__name__).warning(
             "viacep retornou {erro:true} para cep=%s — "
             "CEP inexistente ou upstream com throttling",

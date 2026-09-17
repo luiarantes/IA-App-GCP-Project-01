@@ -19,6 +19,11 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
+from opentelemetry import propagate, trace
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)-8s %(message)s",
@@ -34,12 +39,6 @@ SUBSCRIPTION_ID = os.getenv("PUBSUB_SUBSCRIPTION_ID", "cep-consultado-sub")
 # criados pelo Terraform e a GSA não tem permissão de criação.
 _MODO_EMULADOR = bool(os.getenv("PUBSUB_EMULATOR_HOST"))
 _HEALTH_PORT = int(os.getenv("WORKER_HEALTH_PORT", "8000"))
-
-# Instrumentação OpenTelemetry
-from opentelemetry import propagate, trace
-from opentelemetry.sdk.resources import Resource
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 OTEL_EXPORTER_OTLP_ENDPOINT = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
 ENABLE_CLOUD_TRACE = os.getenv("ENABLE_CLOUD_TRACE", "true").lower() == "true"
@@ -80,8 +79,9 @@ if OTEL_EXPORTER_OTLP_LOGS_ENDPOINT:
         from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 
         log_headers = {}
-        if os.getenv("OTEL_EXPORTER_OTLP_HEADERS"):
-            for h in os.getenv("OTEL_EXPORTER_OTLP_HEADERS").split(","):
+        headers_env = os.getenv("OTEL_EXPORTER_OTLP_HEADERS")
+        if headers_env:
+            for h in headers_env.split(","):
                 if "=" in h:
                     k, v = h.split("=", 1)
                     log_headers[k.strip()] = v.strip()
@@ -116,10 +116,10 @@ if PYROSCOPE_SERVER_ADDRESS:
 def _garantir_recursos() -> tuple:
     """Cria tópico e subscription se não existirem. Retorna (subscriber, subscription_path)."""
     from google.api_core.exceptions import AlreadyExists
-    from google.cloud import pubsub_v1
+    from google.cloud.pubsub_v1 import PublisherClient, SubscriberClient
 
-    pub = pubsub_v1.PublisherClient()
-    sub = pubsub_v1.SubscriberClient()
+    pub = PublisherClient()
+    sub = SubscriberClient()
 
     topic_path = pub.topic_path(PROJECT_ID, TOPIC_ID)
     subscription_path = sub.subscription_path(PROJECT_ID, SUBSCRIPTION_ID)
@@ -216,8 +216,9 @@ def main() -> None:
             if _MODO_EMULADOR:
                 subscriber, subscription_path = _garantir_recursos()
             else:
-                from google.cloud import pubsub_v1
-                subscriber = pubsub_v1.SubscriberClient()
+                from google.cloud.pubsub_v1 import SubscriberClient
+
+                subscriber = SubscriberClient()
                 subscription_path = subscriber.subscription_path(PROJECT_ID, SUBSCRIPTION_ID)
                 logger.info("Modo GCP: usando subscription existente '%s'", subscription_path)
             break
