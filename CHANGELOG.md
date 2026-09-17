@@ -8,11 +8,12 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ## [Unreleased]
 
 ### Added
+- Workflow de CI independente (`.github/workflows/ci.yml`) para validação contínua com Ruff, Mypy e Pytest em commits e pull requests.
 - Verificação estática de tipos com **Mypy** nas dependências de desenvolvimento e configuração no `pyproject.toml`.
 - Marcador formal `@pytest.mark.integration` no `pyproject.toml` para isolamento de testes de integração com WireMock.
 
 ### Changed
-- Pipeline de CI (`.github/workflows/deploy.yml`) atualizado com etapa de linting e validação de estilo via **Ruff** antes da execução dos testes.
+- Desacoplamento da esteira de deploy em nuvem (`.github/workflows/deploy.yml`), que passa a operar exclusivamente sob demanda (`workflow_dispatch`), respeitando a efemeridade e o custo zero da infraestrutura GCP.
 - Seção de testes no `README.md` reestruturada para "Qualidade de Código e Testes", detalhando uso do Ruff, Mypy e filtros de execução do Pytest.
 
 ### Fixed

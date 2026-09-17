@@ -1,0 +1,31 @@
+name: CI BuscaCEP
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Lint, tipos e testes unitários
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependências
+        run: pip install -r requirements-dev.txt
+
+      - name: Lint e verificação de estilo com Ruff
+        run: ruff check .
+
+      - name: Checagem estática de tipagem com Mypy
+        run: mypy .
+
+      - name: Rodar testes unitários
+        run: pytest -m "not integration"

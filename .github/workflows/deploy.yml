@@ -1,8 +1,8 @@
 name: Deploy BuscaCEP
 
+# O deploy em nuvem é executado sob demanda para respeitar o ciclo de vida efêmero
+# do cluster GKE e Artifact Registry (custo zero quando inativo).
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 env:
