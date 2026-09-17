@@ -5,6 +5,10 @@ notas-privadas/
 .pytest_cache/
 .DS_Store
 
+# Variáveis de ambiente e segredos
+.env
+.env.*
+
 # Contexto pra sessoes de IA (Antigravity / Claude Code) - mesma logica do
 # notas-privadas/, nunca vai pro repo publico
 CLAUDE.md

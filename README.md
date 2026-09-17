@@ -97,18 +97,44 @@ docker compose stop worker
 docker compose start worker
 ```
 
-## Testes
+## Qualidade de Código e Testes
 
-Testes unitários — rodam offline, sem rede nem Docker:
+### Verificação de Estilo e Sintaxe (Ruff)
+
+```bash
+ruff check .
+```
+
+Para aplicar correções automáticas de estilo e ordenação de imports:
+
+```bash
+ruff check --fix .
+```
+
+### Checagem Estática de Tipagem (Mypy)
+
+```bash
+mypy .
+```
+
+### Testes Automatizados
+
+Testes unitários — rodam offline, sem rede nem dependência do Docker:
+
+```bash
+pytest -m "not integration"
+```
+
+Ou apontando diretamente para o arquivo:
 
 ```bash
 pytest tests/test_api.py -v
 ```
 
-Os testes substituem a chamada ao ViaCEP por dublês, então rodam offline.
+Os testes substituem a chamada ao ViaCEP por dublês, garantindo execução rápida e determinística.
 
-Testes de integração — exercitam o cliente HTTP real contra um servidor
-[WireMock](https://wiremock.org) que simula o ViaCEP. Requerem Docker:
+Testes de integração — exercitam o cliente HTTP real contra um container
+[WireMock](https://wiremock.org) que simula o ViaCEP. Requerem Docker ativo:
 
 ```bash
 pytest tests/integration/ -v

@@ -2,3 +2,44 @@
 # Adiciona a raiz do projeto ao PYTHONPATH para que `from app import ...`
 # funcione tanto localmente quanto no CI (pytest >= 7.0).
 pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-ra -q"
+markers = [
+    "integration: testes de integracao que necessitam de Docker/WireMock",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+exclude = [
+    ".venv",
+    ".git",
+    "__pycache__",
+    ".pytest_cache",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501", # line length handled by formatter
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+[tool.mypy]
+python_version = "3.11"
+strict = false
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true

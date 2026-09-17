@@ -1,3 +1,5 @@
 -r requirements.txt
 pytest>=8.0
 anyio[trio]>=4.0   # testes async (integração com WireMock)
+ruff>=0.4.0
+mypy>=1.10.0
