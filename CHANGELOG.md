@@ -5,7 +5,7 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo.
 O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/)
 e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
-## [Unreleased]
+## [0.4.0] - 2026-09-17
 
 ### Added
 - Workflow de CI independente (`.github/workflows/ci.yml`) para validação contínua com Ruff, Mypy e Pytest em commits e pull requests.
@@ -23,12 +23,33 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 - **viacep**: Tipagem estática de retorno `dict[str, Any]` e validação defensiva de dicionário no cliente HTTP (`isinstance(dados, dict)`).
 - Reorganização e ordenação de imports dos módulos OpenTelemetry para o topo dos arquivos conforme a PEP 8 (Ruff E402/I001).
 
-## [0.1.0] - 2026-08-15
+## [0.3.0] - 2026-09-11
 
 ### Added
-- API REST BuscaCEP construída em FastAPI com integração à API pública do ViaCEP.
-- Worker assíncrono para consumo e processamento de eventos publicados via Cloud Pub/Sub.
-- Instrumentação de observabilidade com OpenTelemetry SDK (traces e logs correlacionados via traceparent) e exportador contínuo de profiling via Grafana Pyroscope.
-- Suíte de testes unitários com dublês e testes de integração de cliente HTTP com WireMock em Docker.
-- Manifestos Kubernetes (Deployment, Service, HPA, ServiceAccount) e pipeline de entrega contínua via GitHub Actions com Workload Identity.
-- Metadados de catálogo CNCF Backstage/Port (`catalog-info.yaml`).
+- Instrumentação de profiling contínuo com **Grafana Pyroscope** na API e no Worker (`pyroscope-io`).
+- Exportador de logs OTLP com correlação de traces (`traceparent` injetado nos atributos da mensagem do Pub/Sub) para rastreabilidade ponta a ponta.
+- Instrumentação automática do FastAPI e HTTPX via OpenTelemetry SDK com exportação para Cloud Trace / OTLP Collector.
+
+## [0.2.0] - 2026-09-09
+
+### Added
+- Metadados de serviço para catálogo CNCF Backstage / Port (`catalog-info.yaml`).
+
+### Fixed
+- **ci**: Alinhamento de localização do cluster para `us-central1-a` em conformidade com a migração para cluster GKE Standard Zonal.
+
+## [0.1.0] - 2026-08-11
+
+### Added
+- API REST BuscaCEP construída em FastAPI com consulta de CEP e retorno JSON.
+- Cliente HTTP assíncrono para integração com ViaCEP com suporte a override de URL base.
+- Worker assíncrono para consumo e processamento de eventos publicados via Cloud Pub/Sub com Dead Letter Queue (DLQ).
+- Suíte de testes unitários com dublês (monkeypatch) para execução 100% offline.
+- Suíte de testes de integração com container **WireMock** via Docker simulando latência e cenários de erro do ViaCEP.
+- Ambiente local completo via Docker Compose (API + Worker + Emulador Pub/Sub).
+- Manifestos Kubernetes (Deployment, Service, HPA, ServiceAccount, PodMonitoring) e pipeline de deploy no GKE com Workload Identity Federation.
+
+### Fixed
+- Configuração do `pythonpath` no Pytest para resolução de importação de módulos no CI.
+- Aumento do timeout de rollout do Deployment para 5 minutos no pipeline de CD.
+- Tratamento de log para throttling do ViaCEP (`{erro: true}`).
