@@ -5,6 +5,13 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo.
 O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/)
 e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
+## [Unreleased]
+
+### Changed
+- **k8s**: Migração de todos os manifestos Kubernetes (`deployment-api`, `deployment-worker`, `service`, `hpa`, `serviceaccount`, `podmonitoring`) do namespace `default` para o namespace isolado `apps`.
+- **telemetry**: Atualização dos endpoints de telemetria para FQDNs entre namespaces (`otel-collector.observability:4318` e `pyroscope.observability:4040`).
+- **ci/cd**: Alinhamento do workflow `.github/workflows/deploy.yml` para deployment direcionado no namespace `apps` com criação declarativa e idempotente.
+
 ## [0.4.0] - 2026-09-17
 
 ### Added

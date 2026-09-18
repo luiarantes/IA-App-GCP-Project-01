@@ -8,7 +8,7 @@ apiVersion: monitoring.googleapis.com/v1
 kind: PodMonitoring
 metadata:
   name: buscacep-api
-  namespace: default
+  namespace: apps
 spec:
   selector:
     matchLabels:

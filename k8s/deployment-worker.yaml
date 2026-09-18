@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: buscacep-worker
-  namespace: default
+  namespace: apps
   labels:
     app: buscacep-worker
 spec:
@@ -30,11 +30,11 @@ spec:
             - name: PUBSUB_SUBSCRIPTION_ID
               value: "cep-consultado-sub"
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: "http://otel-collector:4318/v1/traces"
+              value: "http://otel-collector.observability:4318/v1/traces"
             - name: OTEL_EXPORTER_OTLP_LOGS_ENDPOINT
-              value: "http://otel-collector:4318/v1/logs"
+              value: "http://otel-collector.observability:4318/v1/logs"
             - name: PYROSCOPE_SERVER_ADDRESS
-              value: "http://pyroscope:4040"
+              value: "http://pyroscope.observability:4040"
 
 
           resources:

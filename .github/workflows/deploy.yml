@@ -12,7 +12,7 @@ env:
   AR_REPO: sample-app
   IMAGE: buscacep
   CLUSTER: aiops-gke
-  NAMESPACE: default
+  NAMESPACE: apps
   WIF_PROVIDER: projects/1024364095553/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider
   DEPLOY_SA: apps-deploy@ia-infra-gcp-project-01.iam.gserviceaccount.com
 
@@ -112,7 +112,9 @@ jobs:
           sed -i "s|IMAGE_PLACEHOLDER|${IMAGE}|g" k8s/deployment-api.yaml k8s/deployment-worker.yaml
 
       - name: Aplicar manifestos
-        run: kubectl apply -f k8s/ -n ${{ env.NAMESPACE }}
+        run: |
+          kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+          kubectl apply -f k8s/ -n ${{ env.NAMESPACE }}
 
       - name: Aguardar rollout
         run: |
